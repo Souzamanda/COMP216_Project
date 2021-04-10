@@ -2,7 +2,7 @@ import discord
 import os
 import random
 from replit import db
-from keep_alive import keep_alive
+#from keep_alive import keep_alive
 
 client = discord.Client()
 
@@ -22,7 +22,30 @@ def delete_course(index):
 
 @client.event
 async def on_ready():
-    print('Logged in as {0.user}'.format(client))
+  print('Logged in as {0.user}'.format(client))
+  await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='Over This Server'))
+
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
+
+#responding new joiner
+@client.event
+async def on_member_join(member): 
+                         
+    #guild = client.get_guild(814620705425195049)   #serverID
+    #channel = guild.get_channel(814620705794687017)   #channelID
+    
+    #testing server
+    guild = client.get_guild(829803116270190663)
+    channel = guild.get_channel(829803116270190666)
+
+    print('join info: ',member.name)
+
+    #welcome the member on server
+    await channel.send(f':computer: Welcome, its COMP216/SEC401 Group 2 {member.mention} ! :nerd:')
+    #welcome the member on direct msg
+    await member.send(f':computer: Welcome to {guild.name}, {member.name}! :nerd:')
 
 @client.event
 async def on_message(message):
@@ -65,5 +88,5 @@ async def on_message(message):
       helpEmbed.add_field(name="$random", value="Selects a random course", inline=False)
       await message.channel.send(embed=helpEmbed)
 
-keep_alive()
+#keep_alive()
 client.run(os.getenv('TOKEN'))
