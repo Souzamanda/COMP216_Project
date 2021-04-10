@@ -1,17 +1,20 @@
 import discord
 import os
 import random
+import requests
+import json
 from replit import db
 from discord.ext import commands
 from discord.ext import tasks
 from itertools import cycle
-#from keep_alive import keep_alive
+from keep_alive import keep_alive
 
 intents = discord.Intents.default()
 intents.members = True
-client = commands.Bot(command_prefix=".", intents = intents)
+client = commands.Bot(command_prefix="!", intents = intents)
 
 status = cycle(['with fire', 'with knives', 'with feelings', 'with hearts', 'with myself', 'dead'])
+locations = ['oshawa', 'toronto', 'mississauga', 'brampton', 'scarborough']
 
 def update_courses(course_link):
   if "courses" in db.keys():
@@ -27,8 +30,34 @@ def delete_course(index):
     del courses[index]
     db["courses"] = courses
 
+def get_weather(location):
+  url = 'https://community-open-weather-map.p.rapidapi.com/find'
+  querystring = {"q":location,"lat":"0","lon":"0","callback":"test","id":"2172797","lang":"null","units":"\"metric\" or \"imperial\"","mode":"xml, html"}
+  headers = {
+    'x-rapidapi-key': f"{os.getenv('W-CREDENTIALS')}",
+    'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com"
+  }
+  response = requests.get(url, headers=headers, params=querystring)
+  jsonData = json.loads(response.text[5:len(response.text) - 1])
+  #print(len(response.text))
+  return(jsonData['list'][0])
+
+def get_temperature(location):
+  weather = get_weather(location)
+  tempK = float(weather['main']['temp'])
+  tempC = round(tempK - float(273.15), 2)
+  return tempC
+
+def get_location(message):
+  msg = message.lower().split()
+  for location in locations:
+    for word in msg:
+      if location == word:
+        return location
+
 @client.event
 async def on_ready():
+  change_status.start()
   print('Logged in as {0.user}'.format(client))
   
 
@@ -88,21 +117,58 @@ async def on_message(message):
     if msg.lower().startswith('$random'):
       await message.channel.send(random.choice(db["courses"]))
 
+    if msg.lower().startswith('$temperature'):
+      if any(word in msg.lower() for word in locations):
+        loc = get_location(msg)
+        temp = get_temperature(loc)
+        reply = f"The temperature in {loc} is {temp} degree Celsius"
+        await message.channel.send(reply)
+
     if msg.lower().startswith("?help"):
       helpEmbed = discord.Embed(
         title="Commands list",
-        colour=0x4EE3D9,
-        description="-----------------------------------"
+        colour=0x4EE3D9
       )
-      helpEmbed.add_field(name="$hi", value="Greeting", inline=False)
-      helpEmbed.add_field(name="$members", value="Show team members names", inline=False)
-      helpEmbed.add_field(name="$description", value="Show project description", inline=False)
-      helpEmbed.add_field(name="$list", value="Shows all courses in the list", inline=False)
-      helpEmbed.add_field(name="$add + link", value="Add a new course", inline=False)
-      helpEmbed.add_field(name="del + number", value="Delete corresponding course (list starts in 0)", inline=False)
-      helpEmbed.add_field(name="$random", value="Selects a random course", inline=False)
+      helpEmbed.add_field(name="--------------------------------------------------------------------------------------------------", value="Project commands", inline=False)
+      helpEmbed.add_field(name="$hi", value="Greeting", inline=True)
+      helpEmbed.add_field(name="$members", value="Show team members names", inline=True)
+      helpEmbed.add_field(name="$description", value="Show project description", inline=True)
+      helpEmbed.add_field(name="--------------------------------------------------------------------------------------------------", value="Courses commands", inline=False)
+      helpEmbed.add_field(name="$list", value="Shows all courses in the list", inline=True)
+      helpEmbed.add_field(name="$add + link", value="Add a new course", inline=True)
+      helpEmbed.add_field(name="del + number", value="Delete corresponding course (list starts in 0)", inline=True)
+      helpEmbed.add_field(name="$random", value="Selects a random course", inline=True)
+      helpEmbed.add_field(name="--------------------------------------------------------------------------------------------------", value="Temperature commands", inline=False)
+      helpEmbed.add_field(name="$temperature + location", value="Display the temperature, in Celsius, of the location", inline=False)
+      helpEmbed.add_field(name="Locations available: ", value="Oshawa, Toronto, Mississauga, Brampton, Scarborough", inline=False)
+      helpEmbed.add_field(name="--------------------------------------------------------------------------------------------------", value="Admin commands", inline=False)
+      helpEmbed.add_field(name="!clear", value="Clear the last 5 messages", inline=True)
+      helpEmbed.add_field(name="!kick + @member name", value="Kick the member from the server", inline=True)
+      helpEmbed.add_field(name="!ban + @member name", value="Ban the member from the server", inline=True)
       
       await message.channel.send(embed=helpEmbed)
+
+    responses = ["If I were any better, I'd be you.",
+                 'Average. Not terrific, not terrible, just average.',
+                 "I’ve been going through some crests and troughs in my life. Is everything stable at your end?",
+                 "Overworked and underpaid.",
+                 "Like you, but better.",
+                 "Can't complain. Nobody listens to me anyway.",
+                 "All the better, now that you asked.",
+                 "I don't know, you tell me. How am I right now?",
+                 "I love you.",
+                 "Not so well, does that bother you?",
+                 "Somewhere between better and best.",
+                 "I was fine until you asked.",
+                 "Better now that I'm talking to you.",
+                 "Well, I haven't had my morning coffee yet and no one has gotten hurt, so I'd say pretty good at this point in time.",
+                 "Good at minding my own business? Better than most people.",
+                 "I can't complain! It's against the Company Policy.",
+                 "Well, unless the weather has different plans in store."]
+
+    if msg.lower() == 'how are you?' or msg.lower() == 'how are you' or msg.lower() == 'how r u' or msg.lower() == 'how are u' or msg.lower() == 'how u doing' or msg.lower() == 'how are you doing':
+      response = random.choice(responses)
+      await message.channel.send(response)             
 
     await client.process_commands(message)
 
@@ -123,5 +189,9 @@ async def kick(ctx, member: discord.Member, *, reason=None):
 async def ban(ctx, member: discord.Member, *, reason=None):
     await member.ban(reason=reason)
 
-#keep_alive()
+@tasks.loop(seconds=30)
+async def change_status():
+    await client.change_presence(activity=discord.Game(next(status)))
+
+keep_alive()
 client.run(os.getenv('TOKEN'))
