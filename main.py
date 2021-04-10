@@ -54,6 +54,15 @@ async def on_message(message):
 
     msg = message.content
 
+    if msg.lower() == '$hi':
+        await message.channel.send('Hello! We are group 2')
+
+    if msg.lower().startswith('$members'):
+        await message.channel.send('Aloy, Alussius\nCordeiro de Souza Puttomatti, Amanda\nKhaira, Gurkirat\nSeo, Anna Eunbi\nVolpe, Joseph')
+
+    if msg.lower().startswith('$description'):
+        await message.channel.send('The goal of our project is making a Discord Bot that will perform automated processes. Automated programs that look and act like users and automatically respond to events and commands on Discord are called bots. Discord bot users (or just bots) have nearly unlimited applications due to its “middle man”, like nature. This allows for flexable ideas/features which can be as simple as a string response when messaging the bot with a user, or using the bot to connect and display data on a database site.')
+
     if msg.lower().startswith('$list'):
         courses = []
         if "courses" in db.keys():
@@ -80,12 +89,17 @@ async def on_message(message):
     if msg.lower().startswith("?help"):
       helpEmbed = discord.Embed(
         title="Commands list",
-        colour=0x4EE3D9
+        colour=0x4EE3D9,
+        description="-----------------------------------"
       )
+      helpEmbed.add_field(name="$hi", value="Greeting", inline=False)
+      helpEmbed.add_field(name="$members", value="Show team members names", inline=False)
+      helpEmbed.add_field(name="$description", value="Show project description", inline=False)
       helpEmbed.add_field(name="$list", value="Shows all courses in the list", inline=False)
       helpEmbed.add_field(name="$add + link", value="Add a new course", inline=False)
       helpEmbed.add_field(name="del + number", value="Delete corresponding course (list starts in 0)", inline=False)
       helpEmbed.add_field(name="$random", value="Selects a random course", inline=False)
+      
       await message.channel.send(embed=helpEmbed)
 
 #keep_alive()
