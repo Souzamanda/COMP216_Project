@@ -2,9 +2,16 @@ import discord
 import os
 import random
 from replit import db
+from discord.ext import commands
+from discord.ext import tasks
+from itertools import cycle
 #from keep_alive import keep_alive
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.members = True
+client = commands.Bot(command_prefix=".", intents = intents)
+
+status = cycle(['with fire', 'with knives', 'with feelings', 'with hearts', 'with myself', 'dead'])
 
 def update_courses(course_link):
   if "courses" in db.keys():
@@ -23,11 +30,7 @@ def delete_course(index):
 @client.event
 async def on_ready():
   print('Logged in as {0.user}'.format(client))
-  await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='Over This Server'))
-
-intents = discord.Intents.default()
-intents.members = True
-client = discord.Client(intents=intents)
+  
 
 #responding new joiner
 @client.event
@@ -44,8 +47,7 @@ async def on_member_join(member):
 
     #welcome the member on server
     await channel.send(f':computer: Welcome, its COMP216/SEC401 Group 2 {member.mention} ! :nerd:')
-    #welcome the member on direct msg
-    await member.send(f':computer: Welcome to {guild.name}, {member.name}! :nerd:')
+    
 
 @client.event
 async def on_message(message):
@@ -101,6 +103,25 @@ async def on_message(message):
       helpEmbed.add_field(name="$random", value="Selects a random course", inline=False)
       
       await message.channel.send(embed=helpEmbed)
+
+    await client.process_commands(message)
+
+@client.command()
+async def ping(ctx):
+  await ctx.send(f'{round(client.latency * 1000)}ms')
+
+@client.command()
+async def clear(ctx, amount=5):
+    await ctx.channel.purge(limit=amount)
+
+@client.command()
+async def kick(ctx, member: discord.Member, *, reason=None):
+    await member.kick(reason=reason)
+
+
+@client.command()
+async def ban(ctx, member: discord.Member, *, reason=None):
+    await member.ban(reason=reason)
 
 #keep_alive()
 client.run(os.getenv('TOKEN'))
